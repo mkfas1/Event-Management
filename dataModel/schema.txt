@@ -1,0 +1,141 @@
+create table person (
+    id int(255)  PRIMARY KEY AUTO_INCREMENT, 
+    user_name varchar(256) not null, 
+    name varchar(256) not null,
+    email varchar(256),
+    phone varchar(256) not null,
+    password varchar(256) not null,
+    address varchar(256),
+    status int(10) not null,
+    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+); 
+
+create table single_package (
+    id int(255)  PRIMARY KEY AUTO_INCREMENT, 
+    category varchar(256) not null,
+    package_name varchar(256) not null, 
+    vendor_username varchar(256) not null,
+    price int(255) not null,
+    transport_cost int(255),
+    available_status varchar(256) not null,
+    description varchar(256),
+    image varchar(256),
+    rating varchar(256)
+)ENGINE=InnoDB AUTO_INCREMENT=1000 ;
+
+create table booking (
+    id int(255)  PRIMARY KEY AUTO_INCREMENT,  
+    username varchar(256) not null, 
+    transaction varchar(256) not null,
+    email varchar(256), 
+    phone varchar(256) not null, 
+    address varchar(256),
+    bookingdate date, 
+    pendingdate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
+    vendorname varchar(256),
+    packagename varchar(256), 
+    totalcost int(255), 
+    halfpaid varchar(256), 
+    fullpaid varchar(256)
+);
+
+create table bundle_package(
+    id int(255)  PRIMARY KEY AUTO_INCREMENT, 
+    package_type varchar(256),
+    package_name varchar(256),
+    caterers_available_status varchar(256),
+    decor_florists_available_status varchar(256),
+    makeup_andHair_available_status varchar(256),
+    wedding_cards_available_status varchar(256),
+    mehandi_available_status varchar(256),
+    cakes_available_status varchar(256),
+    dj_available_status varchar(256),
+    photographers_available_status varchar(256),
+    entertainment_available_status varchar(256),
+    price int(255),
+    transport_cost int(255),
+    description varchar(256),
+    available_status varchar(256),
+    vendor_username varchar(256),
+    rating varchar(256)
+)ENGINE=InnoDB AUTO_INCREMENT=2000 ;
+
+create table rating(
+    id int(255)  PRIMARY KEY AUTO_INCREMENT, 
+    package_name varchar(256),
+    vendor_name varchar(256),
+    customer_name varchar(256),
+    rating_value int(255)
+);
+
+
+//trigger for person table
+DELIMITER $$
+create trigger admin_check 
+before INSERT on person
+for each row
+begin
+declare a INT DEFAULT 0;
+select count(id) into a from person where status=0;
+if(a=0 AND new.status=0) then
+SET 
+new.user_name=new.user_name,
+new.name=new.name,
+new.email=new.email,
+new.phone=new.phone,
+new.password=new.password,
+new.address=new.address,
+new.status=new.status,
+new.registration_date=current_timestamp();
+ELSEIF(a=1 AND new.status!=0) THEN
+SET
+new.user_name=new.user_name,
+new.name=new.name,
+new.email=new.email,
+new.phone=new.phone,
+new.password=new.password,
+new.address=new.address,
+new.status=new.status,
+new.registration_date=current_timestamp();
+elseif(a=1 AND new.status=0) then
+signal sqlstate '20000' set message_text = 'Not Possible';
+end if;
+end;$$
+DELIMITER ;
+
+
+
+//trigger for rating table
+
+DELIMITER $$
+create trigger rating_work_single_package
+after INSERT on rating
+for each row
+begin
+update single_package,rating_work_view
+SET 
+single_package.rating=(select new_rating from rating_work_view where single_package.vendor_username=rating_work_view.vendor_name and single_package.package_name=rating_work_view.package_name)
+where single_package.vendor_username=rating_work_view.vendor_name and single_package.package_name=rating_work_view.package_name;
+end;$$
+DELIMITER ;
+
+
+DELIMITER $$
+create trigger rating_work_bundle_package
+after INSERT on rating
+for each row
+begin
+update bundle_package,rating_work_view
+SET 
+bundle_package.rating=(select new_rating from rating_work_view where bundle_package.vendor_username=rating_work_view.vendor_name and bundle_package.package_name=rating_work_view.package_name)
+where bundle_package.vendor_username=rating_work_view.vendor_name and bundle_package.package_name=rating_work_view.package_name;
+end;$$
+DELIMITER ;
+
+
+//view for rating table
+
+DELIMITER $$
+create view rating_work_view as
+select vendor_name,package_name,avg(rating_value) as new_rating from rating 
+group by vendor_name,package_name;
